@@ -1053,6 +1053,9 @@ python split_and_strip_files () {
             for file in staticlibs:
                 results.extend(source_info(file, d, fatal=False))
 
+        # Stash this for emit_pkgdata
+        d.setVar('TEMPDBGSRCMAPPING', results)
+
         sources = set()
         for r in results:
             sources.update(r[1])
@@ -1356,6 +1359,7 @@ PKGDATA_VARS = "PN PE PV PR PKGE PKGV PKGR LICENSE DESCRIPTION SUMMARY RDEPENDS 
 python emit_pkgdata() {
     from glob import glob
     import json
+    import subprocess
 
     def process_postinst_on_target(pkg, mlprefix):
         pkgval = d.getVar('PKG_%s' % pkg)
@@ -1507,6 +1511,33 @@ fi
     if bb.data.inherits_class('allarch', d) and not variants \
         and not bb.data.inherits_class('packagegroup', d):
         write_extra_runtime_pkgs(global_variants, packages, pkgdatadir)
+
+    sourceresult = d.getVar('TEMPDBGSRCMAPPING', False)
+    sources = {}
+    if sourceresult:
+        for r in sourceresult:
+            sources[r[0]] = r[1]
+        with open(data_file + ".srclist", 'w') as f:
+            f.write(json.dumps(sources, sort_keys=True))
+
+        filelics = {}
+        for dirent in [d.getVar('PKGD'), d.getVar('STAGING_DIR_TARGET')]:
+            p = subprocess.Popen(["grep", 'SPDX-License-Identifier:', '-R', '-I'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=dirent)
+            out, err = p.communicate()
+            if p.returncode == 0:
+                for l in out.decode("utf-8").split("\n"):
+                    l = l.strip()
+                    if not l:
+                        continue
+                    l = l.split(":")
+                    if len(l) < 3:
+                        bb.warn(str(l))
+                        continue
+                    fn = "/" + l[0]
+                    lic = l[2]
+                    filelics[fn] = lic
+        with open(data_file + ".filelics", 'w') as f:
+            f.write(json.dumps(filelics, sort_keys=True))
 
 }
 emit_pkgdata[dirs] = "${PKGDESTWORK}/runtime ${PKGDESTWORK}/runtime-reverse ${PKGDESTWORK}/runtime-rprovides"
