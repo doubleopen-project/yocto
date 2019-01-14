@@ -1446,6 +1446,8 @@ fi
 
     workdir = d.getVar('WORKDIR')
 
+    filemap = {}
+
     for pkg in packages.split():
         pkgval = d.getVar('PKG_%s' % pkg)
         if pkgval is None:
@@ -1458,6 +1460,9 @@ fi
         seen = set()
         for f in pkgfiles[pkg]:
             relpth = os.path.relpath(f, pkgdestpkg)
+            if not pkg in filemap:
+                filemap[pkg] = []
+            filemap[pkg].append(os.sep + relpth)
             fstat = os.lstat(f)
             files[os.sep + relpth] = fstat.st_size
             if fstat.st_ino not in seen:
@@ -1534,11 +1539,43 @@ fi
                         bb.warn(str(l))
                         continue
                     fn = "/" + l[0]
-                    lic = l[2]
+                    lic = l[2].strip()
+                    if lic.endswith("*/"):
+                        lic = lic[:-2]
+                    lic = lic.strip()
                     filelics[fn] = lic
         with open(data_file + ".filelics", 'w') as f:
             f.write(json.dumps(filelics, sort_keys=True))
 
+        computedlics = {}
+        computedpkglics = {}
+        for r in sourceresult:
+            for subf in r[1]:
+                if subf in filelics:
+                    if r[0] not in computedlics:
+                        computedlics[r[0]] = set()
+                    computedlics[r[0]].add(filelics[subf])
+        #if computedlics:
+        #    bb.warn(str(computedlics))
+        dvar = d.getVar('PKGD')
+        for f in computedlics:
+            shortf = f.replace(dvar, "")
+            found = False
+            for pkg in filemap:
+                if shortf in filemap[pkg]:
+                    found = True
+                    if pkg not in computedpkglics:
+                        computedpkglics[pkg] = set()
+                    computedpkglics[pkg].update(computedlics[f])
+            if not found:
+                bb.warn("%s not in %s" % (f, str(filemap)))
+        #if computedpkglics:
+        #    bb.warn(str(computedpkglics))
+        for pkg in computedpkglics:
+            lic = d.getVar('LICENSE_%s' % (pkg))
+            if not lic:
+                lic = d.getVar('LICENSE')
+            bb.warn("License for package %s is %s vs %s" % (pkg, computedpkglics[pkg], lic))
 }
 emit_pkgdata[dirs] = "${PKGDESTWORK}/runtime ${PKGDESTWORK}/runtime-reverse ${PKGDESTWORK}/runtime-rprovides"
 
