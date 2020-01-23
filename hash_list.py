@@ -57,19 +57,19 @@ def try_sha256(elf_file_folder, source_file):
 def debug_sha256(elf_file_folder, source_file):
     debug_dictionary = {}
     try:
-        debug_dictionary['package'] = calculate_sha256(elf_file_folder + '/package' + source_file).hexdigest()
+        debug_dictionary['package'] = calculate_sha256(elf_file_folder + '/package' + source_file)
     except:
         debug_dictionary['package'] = None
     try:
-        debug_dictionary['recipe-sysroot'] = calculate_sha256(elf_file_folder + '/recipe-sysroot' + source_file).hexdigest()
+        debug_dictionary['recipe-sysroot'] = calculate_sha256(elf_file_folder + '/recipe-sysroot' + source_file)
     except:
         debug_dictionary['recipe-sysroot'] = None
     try:
-        debug_dictionary['recipe-sysroot-native'] = calculate_sha256(elf_file_folder + '/recipe-sysroot-native' + source_file).hexdigest()
+        debug_dictionary['recipe-sysroot-native'] = calculate_sha256(elf_file_folder + '/recipe-sysroot-native' + source_file)
     except:
         debug_dictionary['recipe-sysroot-native'] = None
     try:
-        debug_dictionary['root'] = calculate_sha256(path + "/" + "/".join(source_file.split("/", 4)[4:])).hexdigest()
+        debug_dictionary['root'] = calculate_sha256(path + "/" + "/".join(source_file.split("/", 4)[4:]))
     except:
         debug_dictionary['root'] = None
     return debug_dictionary
@@ -103,6 +103,8 @@ for file in os.listdir(pkgdata_folder):
                    
                     if debug:
                         hash_dictionary[file][elf_file][source_file] = debug_sha256(elf_file_folder, source_file)
+
+print()
 
 # Write the data to a file.
 print('Writing data to hash_list.json.')
