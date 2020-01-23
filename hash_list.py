@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright (c) 2020 HH Partners, Attorneys-at-law Ltd
+# SPDX-License-Identifier: MIT
+# Author: Mikko Murto
 
 import os
 import json
