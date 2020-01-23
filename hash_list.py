@@ -7,6 +7,7 @@ import os
 import json
 import hashlib
 import argparse
+import glob
 
 # Buffer size for hash calculation.
 BUF_SIZE = 65536
@@ -76,9 +77,17 @@ def debug_sha256(elf_file_folder, source_file):
 
 hash_dictionary = {}
 
+srclist_amount = len(glob.glob1(pkgdata_folder, '*.srclist'))
+srclist_current_counter = 1
+
 # Loop over all srclist files and extract the data.
 for file in os.listdir(pkgdata_folder):
     if file.endswith('.srclist'):
+
+        # Progress 
+        print(f"Currently processing srclist {srclist_current_counter} of {srclist_amount} total.", end='\r')
+        srclist_current_counter += 1
+
         with open(pkgdata_folder + file) as srclist_file:
             hash_dictionary[file] = {}
             data = json.load(srclist_file)
@@ -94,12 +103,8 @@ for file in os.listdir(pkgdata_folder):
                    
                     if debug:
                         hash_dictionary[file][elf_file][source_file] = debug_sha256(elf_file_folder, source_file)
-                    
+
 # Write the data to a file.
+print('Writing data to hash_list.json.')
 with open('hash_list.json', 'w') as outfile:
     json.dump(hash_dictionary, outfile, indent=4, sort_keys=True)
-
-if debug:
-    for srclist, elf_files in hash_dictionary.items():
-        for elf_file in elf_files:
-            print(elf_file)
