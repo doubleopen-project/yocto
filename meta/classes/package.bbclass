@@ -40,7 +40,6 @@
 
 inherit packagedata
 inherit chrpath
-inherit package_pkgdata
 
 # Need the package_qa_handle_error() in insane.bbclass
 inherit insane
@@ -1006,12 +1005,6 @@ python split_and_strip_files () {
                 symlinks[file] = target
 
         results = oe.utils.multiprocess_launch(oe.package.is_elf, checkelf.keys(), d)
-
-        # Sort results by file path. This ensures that the files are always
-        # processed in the same order, which is important to make sure builds
-        # are reproducible when dealing with hardlinks
-        results.sort(key=lambda x: x[0])
-
         for (file, elf_file) in results:
             # It's a file (or hardlink), not a link
             # ...but is it ELF, and is it already stripped?
@@ -1052,6 +1045,9 @@ python split_and_strip_files () {
         if debugsrcdir and not targetos.startswith("mingw"):
             for file in staticlibs:
                 results.extend(source_info(file, d, fatal=False))
+
+        # Stash this for emit_pkgdata
+        d.setVar('TEMPDBGSRCMAPPING', results)
 
         sources = set()
         for r in results:
@@ -1217,8 +1213,7 @@ python populate_packages () {
                 src = os.path.join(src, p)
                 dest = os.path.join(dest, p)
                 fstat = cpath.stat(src)
-                os.mkdir(dest)
-                os.chmod(dest, fstat.st_mode)
+                os.mkdir(dest, fstat.st_mode)
                 os.chown(dest, fstat.st_uid, fstat.st_gid)
                 if p not in seen:
                     seen.append(p)
@@ -1351,23 +1346,18 @@ EXPORT_FUNCTIONS package_name_hook
 
 PKGDESTWORK = "${WORKDIR}/pkgdata"
 
-PKGDATA_VARS = "PN PE PV PR PKGE PKGV PKGR LICENSE DESCRIPTION SUMMARY RDEPENDS RPROVIDES RRECOMMENDS RSUGGESTS RREPLACES RCONFLICTS SECTION PKG ALLOW_EMPTY FILES CONFFILES FILES_INFO pkg_postinst pkg_postrm pkg_preinst pkg_prerm"
-
 python emit_pkgdata() {
     from glob import glob
     import json
+    import subprocess
 
     def process_postinst_on_target(pkg, mlprefix):
-        pkgval = d.getVar('PKG_%s' % pkg)
-        if pkgval is None:
-            pkgval = pkg
-
         defer_fragment = """
 if [ -n "$D" ]; then
     $INTERCEPT_DIR/postinst_intercept delay_to_first_boot %s mlprefix=%s
     exit 0
 fi
-""" % (pkgval, mlprefix)
+""" % (pkg, mlprefix)
 
         postinst = d.getVar('pkg_postinst_%s' % pkg)
         postinst_ontarget = d.getVar('pkg_postinst_ontarget_%s' % pkg)
@@ -1442,6 +1432,8 @@ fi
 
     workdir = d.getVar('WORKDIR')
 
+    filemap = {}
+
     for pkg in packages.split():
         pkgval = d.getVar('PKG_%s' % pkg)
         if pkgval is None:
@@ -1454,6 +1446,9 @@ fi
         seen = set()
         for f in pkgfiles[pkg]:
             relpth = os.path.relpath(f, pkgdestpkg)
+            if not pkg in filemap:
+                filemap[pkg] = []
+            filemap[pkg].append(os.sep + relpth)
             fstat = os.lstat(f)
             files[os.sep + relpth] = fstat.st_size
             if fstat.st_ino not in seen:
@@ -1461,26 +1456,48 @@ fi
                 total_size += fstat.st_size
         d.setVar('FILES_INFO', json.dumps(files, sort_keys=True))
 
+        subdata_file = pkgdatadir + "/runtime/%s" % pkg
+        sf = open(subdata_file, 'w')
+        write_if_exists(sf, pkg, 'PN')
+        write_if_exists(sf, pkg, 'PE')
+        write_if_exists(sf, pkg, 'PV')
+        write_if_exists(sf, pkg, 'PR')
+        write_if_exists(sf, pkg, 'PKGE')
+        write_if_exists(sf, pkg, 'PKGV')
+        write_if_exists(sf, pkg, 'PKGR')
+        write_if_exists(sf, pkg, 'LICENSE')
+        write_if_exists(sf, pkg, 'DESCRIPTION')
+        write_if_exists(sf, pkg, 'SUMMARY')
+        write_if_exists(sf, pkg, 'RDEPENDS')
+        rprov = write_if_exists(sf, pkg, 'RPROVIDES')
+        write_if_exists(sf, pkg, 'RRECOMMENDS')
+        write_if_exists(sf, pkg, 'RSUGGESTS')
+        write_if_exists(sf, pkg, 'RREPLACES')
+        write_if_exists(sf, pkg, 'RCONFLICTS')
+        write_if_exists(sf, pkg, 'SECTION')
+        write_if_exists(sf, pkg, 'PKG')
+        write_if_exists(sf, pkg, 'ALLOW_EMPTY')
+        write_if_exists(sf, pkg, 'FILES')
+        write_if_exists(sf, pkg, 'CONFFILES')
         process_postinst_on_target(pkg, d.getVar("MLPREFIX"))
         add_set_e_to_scriptlets(pkg)
+        write_if_exists(sf, pkg, 'pkg_postinst')
+        write_if_exists(sf, pkg, 'pkg_postrm')
+        write_if_exists(sf, pkg, 'pkg_preinst')
+        write_if_exists(sf, pkg, 'pkg_prerm')
+        write_if_exists(sf, pkg, 'FILERPROVIDESFLIST')
+        write_if_exists(sf, pkg, 'FILES_INFO')
+        for dfile in (d.getVar('FILERPROVIDESFLIST_' + pkg) or "").split():
+            write_if_exists(sf, pkg, 'FILERPROVIDES_' + dfile)
 
-        subdata_file = pkgdatadir + "/runtime/%s" % pkg
-        with open(subdata_file, 'w') as sf:
-            for var in (d.getVar('PKGDATA_VARS') or "").split():
-                val = write_if_exists(sf, pkg, var)
+        write_if_exists(sf, pkg, 'FILERDEPENDSFLIST')
+        for dfile in (d.getVar('FILERDEPENDSFLIST_' + pkg) or "").split():
+            write_if_exists(sf, pkg, 'FILERDEPENDS_' + dfile)
 
-            write_if_exists(sf, pkg, 'FILERPROVIDESFLIST')
-            for dfile in (d.getVar('FILERPROVIDESFLIST_' + pkg) or "").split():
-                write_if_exists(sf, pkg, 'FILERPROVIDES_' + dfile)
-
-            write_if_exists(sf, pkg, 'FILERDEPENDSFLIST')
-            for dfile in (d.getVar('FILERDEPENDSFLIST_' + pkg) or "").split():
-                write_if_exists(sf, pkg, 'FILERDEPENDS_' + dfile)
-
-            sf.write('%s_%s: %d\n' % ('PKGSIZE', pkg, total_size))
+        sf.write('%s_%s: %d\n' % ('PKGSIZE', pkg, total_size))
+        sf.close()
 
         # Symlinks needed for rprovides lookup
-        rprov = d.getVar('RPROVIDES_%s' % pkg) or d.getVar('RPROVIDES')
         if rprov:
             for p in rprov.strip().split():
                 subdata_sym = pkgdatadir + "/runtime-rprovides/%s/%s" % (p, pkg)
@@ -1508,6 +1525,65 @@ fi
         and not bb.data.inherits_class('packagegroup', d):
         write_extra_runtime_pkgs(global_variants, packages, pkgdatadir)
 
+    sourceresult = d.getVar('TEMPDBGSRCMAPPING', False)
+    sources = {}
+    if sourceresult:
+        for r in sourceresult:
+            sources[r[0]] = r[1]
+        with open(data_file + ".srclist", 'w') as f:
+            f.write(json.dumps(sources, sort_keys=True))
+
+        filelics = {}
+        for dirent in [d.getVar('PKGD'), d.getVar('STAGING_DIR_TARGET')]:
+            p = subprocess.Popen(["grep", 'SPDX-License-Identifier:', '-R', '-I'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=dirent)
+            out, err = p.communicate()
+            if p.returncode == 0:
+                for l in out.decode("utf-8").split("\n"):
+                    l = l.strip()
+                    if not l:
+                        continue
+                    l = l.split(":")
+                    if len(l) < 3:
+                        bb.warn(str(l))
+                        continue
+                    fn = "/" + l[0]
+                    lic = l[2].strip()
+                    if lic.endswith("*/"):
+                        lic = lic[:-2]
+                    lic = lic.strip()
+                    filelics[fn] = lic
+        with open(data_file + ".filelics", 'w') as f:
+            f.write(json.dumps(filelics, sort_keys=True))
+
+        computedlics = {}
+        computedpkglics = {}
+        for r in sourceresult:
+            for subf in r[1]:
+                if subf in filelics:
+                    if r[0] not in computedlics:
+                        computedlics[r[0]] = set()
+                    computedlics[r[0]].add(filelics[subf])
+        #if computedlics:
+        #    bb.warn(str(computedlics))
+        dvar = d.getVar('PKGD')
+        for f in computedlics:
+            shortf = f.replace(dvar, "")
+            found = False
+            for pkg in filemap:
+                if shortf in filemap[pkg]:
+                    found = True
+                    if pkg not in computedpkglics:
+                        computedpkglics[pkg] = set()
+                    computedpkglics[pkg].update(computedlics[f])
+            if not found:
+                bb.warn("%s not in %s" % (f, str(filemap)))
+        #if computedpkglics:
+        #    bb.warn(str(computedpkglics))
+        for pkg in computedpkglics:
+            lic = d.getVar('LICENSE_%s' % (pkg))
+            if not lic:
+                lic = d.getVar('LICENSE')
+            bb.warn("License for package %s is %s vs %s" % (pkg, computedpkglics[pkg], lic))
 }
 emit_pkgdata[dirs] = "${PKGDESTWORK}/runtime ${PKGDESTWORK}/runtime-reverse ${PKGDESTWORK}/runtime-rprovides"
 
@@ -1576,11 +1652,10 @@ python package_do_filedeps() {
         d.setVar("FILERPROVIDESFLIST_" + pkg, " ".join(provides_files[pkg]))
 }
 
-SHLIBSDIRS = "${WORKDIR_PKGDATA}/${MLPREFIX}shlibs2"
+SHLIBSDIRS = "${PKGDATA_DIR}/${MLPREFIX}shlibs2"
 SHLIBSWORKDIR = "${PKGDESTWORK}/${MLPREFIX}shlibs2"
 
 python package_do_shlibs() {
-    import itertools
     import re, pipes
     import subprocess
 
@@ -1647,8 +1722,7 @@ python package_do_shlibs() {
                 prov = (this_soname, ldir, pkgver)
                 if not prov in sonames:
                     # if library is private (only used by package) then do not build shlib for it
-                    import fnmatch
-                    if not private_libs or len([i for i in private_libs if fnmatch.fnmatch(this_soname, i)]) == 0:
+                    if not private_libs or this_soname not in private_libs:
                         sonames.add(prov)
                 if libdir_re.match(os.path.dirname(file)):
                     needs_ldconfig = True
@@ -1736,7 +1810,10 @@ python package_do_shlibs() {
 
     needed = {}
 
+    # Take shared lock since we're only reading, not writing
+    lf = bb.utils.lockfile(d.expand("${PACKAGELOCK}"), True)
     shlib_provider = oe.package.read_shlib_providers(d)
+    bb.utils.unlockfile(lf)
 
     for pkg in shlib_pkgs:
         private_libs = d.getVar('PRIVATE_LIBS_' + pkg) or d.getVar('PRIVATE_LIBS') or ""
@@ -1831,21 +1908,20 @@ python package_do_shlibs() {
             # /opt/abc/lib/libfoo.so.1 and contains /usr/bin/abc depending on system library libfoo.so.1
             # but skipping it is still better alternative than providing own
             # version and then adding runtime dependency for the same system library
-            import fnmatch
-            if private_libs and len([i for i in private_libs if fnmatch.fnmatch(n[0], i)]) > 0:
+            if private_libs and n[0] in private_libs:
                 bb.debug(2, '%s: Dependency %s covered by PRIVATE_LIBS' % (pkg, n[0]))
                 continue
             if n[0] in shlib_provider.keys():
-                shlib_provider_map = shlib_provider[n[0]]
-                matches = set()
-                for p in itertools.chain(list(n[2]), sorted(shlib_provider_map.keys()), libsearchpath):
-                    if p in shlib_provider_map:
-                        matches.add(p)
-                if len(matches) > 1:
-                    matchpkgs = ', '.join([shlib_provider_map[match][0] for match in matches])
-                    bb.error("%s: Multiple shlib providers for %s: %s (used by files: %s)" % (pkg, n[0], matchpkgs, n[1]))
-                elif len(matches) == 1:
-                    (dep_pkg, ver_needed) = shlib_provider_map[matches.pop()]
+                shlib_provider_path = []
+                for k in shlib_provider[n[0]].keys():
+                    shlib_provider_path.append(k)
+                match = None
+                for p in list(n[2]) + shlib_provider_path + libsearchpath:
+                    if p in shlib_provider[n[0]]:
+                        match = p
+                        break
+                if match:
+                    (dep_pkg, ver_needed) = shlib_provider[n[0]][match]
 
                     bb.debug(2, '%s: Dependency %s requires package %s (used by files: %s)' % (pkg, n[0], dep_pkg, n[1]))
 
@@ -1923,11 +1999,14 @@ python package_do_pkgconfig () {
                 f.write('%s\n' % p)
             f.close()
 
+    # Take shared lock since we're only reading, not writing
+    lf = bb.utils.lockfile(d.expand("${PACKAGELOCK}"), True)
+
     # Go from least to most specific since the last one found wins
     for dir in reversed(shlibs_dirs):
         if not os.path.exists(dir):
             continue
-        for file in sorted(os.listdir(dir)):
+        for file in os.listdir(dir):
             m = re.match(r'^(.*)\.pclist$', file)
             if m:
                 pkg = m.group(1)
@@ -1937,6 +2016,8 @@ python package_do_pkgconfig () {
                 pkgconfig_provided[pkg] = []
                 for l in lines:
                     pkgconfig_provided[pkg].append(l.rstrip())
+
+    bb.utils.unlockfile(lf)
 
     for pkg in packages.split():
         deps = []
@@ -2134,7 +2215,6 @@ def gen_packagevar(d):
 PACKAGE_PREPROCESS_FUNCS ?= ""
 # Functions for setting up PKGD
 PACKAGEBUILDPKGD ?= " \
-                package_prepare_pkgdata \
                 perform_packagecopy \
                 ${PACKAGE_PREPROCESS_FUNCS} \
                 split_and_strip_files \
@@ -2255,19 +2335,19 @@ python do_package_setscene () {
 }
 addtask do_package_setscene
 
-# Copy from PKGDESTWORK to tempdirectory as tempdirectory can be cleaned at both
-# do_package_setscene and do_packagedata_setscene leading to races
-python do_packagedata () {
-    src = d.expand("${PKGDESTWORK}")
-    dest = d.expand("${WORKDIR}/pkgdata-pdata-input")
-    oe.path.copyhardlinktree(src, dest)
+do_packagedata () {
+	:
 }
 
 addtask packagedata before do_build after do_package
 
 SSTATETASKS += "do_packagedata"
-do_packagedata[sstate-inputdirs] = "${WORKDIR}/pkgdata-pdata-input"
+# PACKAGELOCK protects readers of PKGDATA_DIR against writes
+# whilst code is reading in do_package
+PACKAGELOCK = "${STAGING_DIR}/package-output.lock"
+do_packagedata[sstate-inputdirs] = "${PKGDESTWORK}"
 do_packagedata[sstate-outputdirs] = "${PKGDATA_DIR}"
+do_packagedata[sstate-lockfile] = "${PACKAGELOCK}"
 do_packagedata[stamp-extra-info] = "${MACHINE_ARCH}"
 
 python do_packagedata_setscene () {
