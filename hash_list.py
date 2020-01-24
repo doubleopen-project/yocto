@@ -165,7 +165,7 @@ if debug:
     print(f'Sources, no hash, <built-in>, unique: {len(set(debug_dict["no_hash_found_built_in"]))}.')
     print(f'Sources, no hash, not <built-in>: {len(debug_dict["no_hash_found_not_built_in"])}.')
     print(f'Sources, no hash, not <built-in>, unique: {len(set(debug_dict["no_hash_found_not_built_in"]))}.')
-    print(f'Sources, duplicate hash values: {len(debug_dict["duplicate_hash_found"])}')
+    print(f'Sources, conflicting hash values: {len(debug_dict["duplicate_hash_found"])}')
     
     new_list = []
     counts = []
@@ -187,7 +187,7 @@ if debug:
 
     debug_dict["duplicate_hash_found_unique"] = new_list
 
-    print(f'Sources, duplicate hash values, unique: {len(debug_dict["duplicate_hash_found_unique"])}.')
+    print(f'Sources, conflicting hash values, unique: {len(debug_dict["duplicate_hash_found_unique"])}.')
 
     print('Writing debug data to debug.json.')
     with open('debug.json', 'w') as outfile:
