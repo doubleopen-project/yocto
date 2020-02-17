@@ -23,7 +23,7 @@ debug_dict = {
 }
 
 # Build pkgdata folder.
-pkgdata_folder = "/home/yocto/poky/build/tmp/pkgdata/qemux86-64/"
+pkgdata_folder = "build/tmp/pkgdata/qemux86-64/"
 
 # Parse for '--debug' argument.
 parser = argparse.ArgumentParser()
