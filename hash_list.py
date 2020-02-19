@@ -66,30 +66,46 @@ def try_sha256(elf_file_folder, source_file):
                     return None
 
 # Debug function, return hash for each location, None if not found at the location.
-def debug_sha256(elf_file_folder, source_file):
+
+location_counter = {
+    'location_1': 0,
+    'location_2': 0,
+    'location_3': 0,
+    'location_4': 0,
+    'location_5': 0,
+    'location_6': 0,
+    'location_7': 0
+}
+def debug_sha256(elf_file_folder, source_file, location_counter):
     debug_dictionary = {}
     try:
         debug_dictionary['1: ' + elf_file_folder + '/package' + source_file] = calculate_sha256(elf_file_folder + '/package' + source_file)
+        location_counter['location_1'] += 1
     except:
         debug_dictionary['1: ' + elf_file_folder + '/package' + source_file] = None
     try:
         debug_dictionary['2: ' + elf_file_folder + '/recipe-sysroot' + source_file] = calculate_sha256(elf_file_folder + '/recipe-sysroot' + source_file)
+        location_counter['location_2'] += 1
     except:
         debug_dictionary['2: ' + elf_file_folder + '/recipe-sysroot' + source_file] = None
     try:
         debug_dictionary['3: ' + elf_file_folder + '/recipe-sysroot-native' + source_file] = calculate_sha256(elf_file_folder + '/recipe-sysroot-native' + source_file)
+        location_counter['location_3'] += 1
     except:
         debug_dictionary['3: ' + elf_file_folder + '/recipe-sysroot-native' + source_file] = None
     try:
         debug_dictionary['4: ' + (elf_file_folder + "/" + "/".join(source_file.split("/")[4:]))] = calculate_sha256((elf_file_folder + "/" + "/".join(source_file.split("/")[4:])))
+        location_counter['location_4'] += 1
     except:
         debug_dictionary['4: ' + (elf_file_folder + "/" + "/".join(source_file.split("/")[4:]))] = None
     try:
         debug_dictionary['5: ' + "/".join(elf_file_folder.split("/")[:8]) + "/" + "/".join(source_file.split("/")[4:])] = calculate_sha256("/".join(elf_file_folder.split("/")[:8]) + "/" + "/".join(source_file.split("/")[4:]))
+        location_counter['location_5'] += 1
     except:
         debug_dictionary['5: ' + "/".join(elf_file_folder.split("/")[:8]) + "/" + "/".join(source_file.split("/")[4:])] = None
     try:
         debug_dictionary['6: ' + "/".join(elf_file_folder.split("/")[:6]) + "/" + "/".join(source_file.split("/")[2:])] = calculate_sha256("/".join(elf_file_folder.split("/")[:6]) + "/" + "/".join(source_file.split("/")[2:]))
+        location_counter['location_6'] += 1
     except:
         debug_dictionary['6: ' + "/".join(elf_file_folder.split("/")[:6]) + "/" + "/".join(source_file.split("/")[2:])] = None
     try:
@@ -100,6 +116,7 @@ def debug_sha256(elf_file_folder, source_file):
                     source_file_name_list[i] = source_file.split("/")[i-2] + "-" + source_file.split("/")[i-1].split("-")[0]
                     
             debug_dictionary['7: ' + "/".join(elf_file_folder.split("/")[:8]) + "/" + "/".join(source_file_name_list[4:])] = calculate_sha256("/".join(elf_file_folder.split("/")[:8]) + "/" + "/".join(source_file_name_list[4:]))
+            location_counter['location_7'] += 1
 
     except:
         pass
@@ -136,7 +153,7 @@ for file in os.listdir(pkgdata_folder):
                     hash_dictionary[file][elf_file][source_file] = try_sha256(elf_file_folder, source_file)
                    
                     if debug:
-                        hash_dictionary[file][elf_file][source_file] = debug_sha256(elf_file_folder, source_file)
+                        hash_dictionary[file][elf_file][source_file] = debug_sha256(elf_file_folder, source_file, location_counter)
                         debug_dict['source_list'].append(source_file)
 
                         if not any(value for value in hash_dictionary[file][elf_file][source_file].values()):
@@ -185,7 +202,14 @@ if debug:
     print(f'Sources, no hash, not <built-in>: {len(debug_dict["no_hash_found_not_built_in"])}.')
     print(f'Sources, no hash, not <built-in>, unique: {len(set(debug_dict["no_hash_found_not_built_in"]))}.')
     print(f'Sources, conflicting hash values: {len(debug_dict["duplicate_hash_found"])}')
-    
+    print()
+    print(f'Location 1: {location_counter["location_1"]}.')
+    print(f'Location 2: {location_counter["location_2"]}.')
+    print(f'Location 3: {location_counter["location_3"]}.')
+    print(f'Location 4: {location_counter["location_4"]}.')
+    print(f'Location 5: {location_counter["location_5"]}.')
+    print(f'Location 6: {location_counter["location_6"]}.')
+    print(f'Location 7: {location_counter["location_7"]}.')
     new_list = []
     counts = []
 
