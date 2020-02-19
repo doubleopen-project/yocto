@@ -35,17 +35,20 @@ if debug:
 # Calculate SHA256 hash for a file.
 # https://stackoverflow.com/questions/22058048/hashing-a-file-in-python
 def calculate_sha256(file):
-    sha256 = hashlib.sha256()
+    try:
+        sha256 = hashlib.sha256()
 
-    with open(file, 'rb') as f:
-        while True:
-            data = f.read(BUF_SIZE)
-            if not data:
-                break
-            sha256.update(data)
-    if debug:
-        debug_dict['hash_list'].append(sha256.hexdigest())
-    return sha256.hexdigest()
+        with open(file, 'rb') as f:
+            while True:
+                data = f.read(BUF_SIZE)
+                if not data:
+                    break
+                sha256.update(data)
+        if debug:
+            debug_dict['hash_list'].append(sha256.hexdigest())
+        return sha256.hexdigest()
+    except:
+        return None
 
 # Try to calculate hash for all possible source file locations.
 def try_sha256(elf_file_folder, source_file):
@@ -78,48 +81,44 @@ location_counter = {
 }
 def debug_sha256(elf_file_folder, source_file, location_counter):
     debug_dictionary = {}
-    try:
-        debug_dictionary['1: ' + elf_file_folder + '/package' + source_file] = calculate_sha256(elf_file_folder + '/package' + source_file)
-        location_counter['location_1'] += 1
-    except:
-        debug_dictionary['1: ' + elf_file_folder + '/package' + source_file] = None
-    try:
-        debug_dictionary['2: ' + elf_file_folder + '/recipe-sysroot' + source_file] = calculate_sha256(elf_file_folder + '/recipe-sysroot' + source_file)
-        location_counter['location_2'] += 1
-    except:
-        debug_dictionary['2: ' + elf_file_folder + '/recipe-sysroot' + source_file] = None
-    try:
-        debug_dictionary['3: ' + elf_file_folder + '/recipe-sysroot-native' + source_file] = calculate_sha256(elf_file_folder + '/recipe-sysroot-native' + source_file)
-        location_counter['location_3'] += 1
-    except:
-        debug_dictionary['3: ' + elf_file_folder + '/recipe-sysroot-native' + source_file] = None
-    try:
-        debug_dictionary['4: ' + (elf_file_folder + "/" + "/".join(source_file.split("/")[4:]))] = calculate_sha256((elf_file_folder + "/" + "/".join(source_file.split("/")[4:])))
-        location_counter['location_4'] += 1
-    except:
-        debug_dictionary['4: ' + (elf_file_folder + "/" + "/".join(source_file.split("/")[4:]))] = None
-    try:
-        debug_dictionary['5: ' + "/".join(elf_file_folder.split("/")[:8]) + "/" + "/".join(source_file.split("/")[4:])] = calculate_sha256("/".join(elf_file_folder.split("/")[:8]) + "/" + "/".join(source_file.split("/")[4:]))
-        location_counter['location_5'] += 1
-    except:
-        debug_dictionary['5: ' + "/".join(elf_file_folder.split("/")[:8]) + "/" + "/".join(source_file.split("/")[4:])] = None
-    try:
-        debug_dictionary['6: ' + "/".join(elf_file_folder.split("/")[:6]) + "/" + "/".join(source_file.split("/")[2:])] = calculate_sha256("/".join(elf_file_folder.split("/")[:6]) + "/" + "/".join(source_file.split("/")[2:]))
-        location_counter['location_6'] += 1
-    except:
-        debug_dictionary['6: ' + "/".join(elf_file_folder.split("/")[:6]) + "/" + "/".join(source_file.split("/")[2:])] = None
-    try:
-        source_file_name_list = source_file.split("/")
-        if 'build' in source_file_name_list:       
-            for i, v in enumerate(source_file_name_list):
-                if v == 'build':
-                    source_file_name_list[i] = source_file.split("/")[i-2] + "-" + source_file.split("/")[i-1].split("-")[0]
-                    
-            debug_dictionary['7: ' + "/".join(elf_file_folder.split("/")[:8]) + "/" + "/".join(source_file_name_list[4:])] = calculate_sha256("/".join(elf_file_folder.split("/")[:8]) + "/" + "/".join(source_file_name_list[4:]))
-            location_counter['location_7'] += 1
 
-    except:
-        pass
+    debug_dictionary['1: ' + elf_file_folder + '/package' + source_file] = calculate_sha256(elf_file_folder + '/package' + source_file)
+    if debug_dictionary['1: ' + elf_file_folder + '/package' + source_file]:
+        location_counter['location_1'] += 1
+
+    debug_dictionary['2: ' + elf_file_folder + '/recipe-sysroot' + source_file] = calculate_sha256(elf_file_folder + '/recipe-sysroot' + source_file)
+    if debug_dictionary['2: ' + elf_file_folder + '/recipe-sysroot' + source_file]:
+        location_counter['location_2'] += 1
+
+
+    debug_dictionary['3: ' + elf_file_folder + '/recipe-sysroot-native' + source_file] = calculate_sha256(elf_file_folder + '/recipe-sysroot-native' + source_file)
+    if debug_dictionary['3: ' + elf_file_folder + '/recipe-sysroot-native' + source_file]:
+        location_counter['location_3'] += 1
+
+    debug_dictionary['4: ' + (elf_file_folder + "/" + "/".join(source_file.split("/")[4:]))] = calculate_sha256((elf_file_folder + "/" + "/".join(source_file.split("/")[4:])))
+    if debug_dictionary['4: ' + (elf_file_folder + "/" + "/".join(source_file.split("/")[4:]))]:
+        location_counter['location_4'] += 1
+
+    debug_dictionary['5: ' + "/".join(elf_file_folder.split("/")[:8]) + "/" + "/".join(source_file.split("/")[4:])] = calculate_sha256("/".join(elf_file_folder.split("/")[:8]) + "/" + "/".join(source_file.split("/")[4:]))
+    if debug_dictionary['5: ' + "/".join(elf_file_folder.split("/")[:8]) + "/" + "/".join(source_file.split("/")[4:])]:
+        location_counter['location_5'] += 1
+
+    debug_dictionary['6: ' + "/".join(elf_file_folder.split("/")[:6]) + "/" + "/".join(source_file.split("/")[2:])] = calculate_sha256("/".join(elf_file_folder.split("/")[:6]) + "/" + "/".join(source_file.split("/")[2:]))
+    if debug_dictionary['6: ' + "/".join(elf_file_folder.split("/")[:6]) + "/" + "/".join(source_file.split("/")[2:])]:
+        location_counter['location_6'] += 1
+
+    source_file_name_list = source_file.split("/")
+    if 'build' in source_file_name_list:       
+        for i, v in enumerate(source_file_name_list):
+            if v == 'build':
+                source_file_name_list[i] = source_file.split("/")[i-2] + "-" + source_file.split("/")[i-1].split("-")[0]
+                
+        debug_dictionary['7: ' + "/".join(elf_file_folder.split("/")[:8]) + "/" + "/".join(source_file_name_list[4:])] = calculate_sha256("/".join(elf_file_folder.split("/")[:8]) + "/" + "/".join(source_file_name_list[4:]))
+        if debug_dictionary['7: ' + "/".join(elf_file_folder.split("/")[:8]) + "/" + "/".join(source_file_name_list[4:])]:
+            location_counter['location_7'] += 1
+    else:
+        debug_dictionary['7: not available'] = None
+
     return debug_dictionary
 
 
