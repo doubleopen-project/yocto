@@ -81,17 +81,17 @@ def debug_sha256(elf_file_folder, source_file):
     except:
         debug_dictionary[elf_file_folder + '/recipe-sysroot-native' + source_file] = None
     try:
-        debug_dictionary[(elf_file_folder + "/" + "/".join(source_file.split("/", 4)[4:]))] = calculate_sha256((elf_file_folder + "/" + "/".join(source_file.split("/", 4)[4:])))
+        debug_dictionary[(elf_file_folder + "/" + "/".join(source_file.split("/")[4:]))] = calculate_sha256((elf_file_folder + "/" + "/".join(source_file.split("/")[4:])))
     except:
-        debug_dictionary[(elf_file_folder + "/" + "/".join(source_file.split("/", 4)[4:]))] = None
+        debug_dictionary[(elf_file_folder + "/" + "/".join(source_file.split("/")[4:]))] = None
     try:
-        debug_dictionary["/".join(elf_file_folder.split("/", 8)[:8]) + "/" + "/".join(source_file.split("/", 4)[4:])] = calculate_sha256("/".join(elf_file_folder.split("/", 8)[:8]) + "/" + "/".join(source_file.split("/", 4)[4:]))
+        debug_dictionary["/".join(elf_file_folder.split("/")[:8]) + "/" + "/".join(source_file.split("/")[4:])] = calculate_sha256("/".join(elf_file_folder.split("/")[:8]) + "/" + "/".join(source_file.split("/")[4:]))
     except:
-        debug_dictionary["/".join(elf_file_folder.split("/", 8)[:8]) + "/" + "/".join(source_file.split("/", 4)[4:])] = None
+        debug_dictionary["/".join(elf_file_folder.split("/")[:8]) + "/" + "/".join(source_file.split("/")[4:])] = None
     try:
-        debug_dictionary["/".join(elf_file_folder.split("/", 6)[:6]) + "/" + "/".join(source_file.split("/", 2)[2:])] = calculate_sha256("/".join(elf_file_folder.split("/", 6)[:6]) + "/" + "/".join(source_file.split("/", 2)[2:]))
+        debug_dictionary["/".join(elf_file_folder.split("/")[:6]) + "/" + "/".join(source_file.split("/")[2:])] = calculate_sha256("/".join(elf_file_folder.split("/")[:6]) + "/" + "/".join(source_file.split("/")[2:]))
     except:
-        debug_dictionary["/".join(elf_file_folder.split("/", 6)[:6]) + "/" + "/".join(source_file.split("/", 2)[2:])] = None
+        debug_dictionary["/".join(elf_file_folder.split("/")[:6]) + "/" + "/".join(source_file.split("/")[2:])] = None
     return debug_dictionary
 
 
