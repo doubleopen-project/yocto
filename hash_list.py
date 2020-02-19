@@ -84,6 +84,14 @@ def debug_sha256(elf_file_folder, source_file):
         debug_dictionary[(elf_file_folder + "/" + "/".join(source_file.split("/", 4)[4:]))] = calculate_sha256((elf_file_folder + "/" + "/".join(source_file.split("/", 4)[4:])))
     except:
         debug_dictionary[(elf_file_folder + "/" + "/".join(source_file.split("/", 4)[4:]))] = None
+    try:
+        debug_dictionary["/".join(elf_file_folder.split("/", 8)[:8]) + "/" + "/".join(source_file.split("/", 4)[4:])] = calculate_sha256("/".join(elf_file_folder.split("/", 8)[:8]) + "/" + "/".join(source_file.split("/", 4)[4:]))
+    except:
+        debug_dictionary["/".join(elf_file_folder.split("/", 8)[:8]) + "/" + "/".join(source_file.split("/", 4)[4:])] = None
+    try:
+        debug_dictionary["/".join(elf_file_folder.split("/", 6)[:6]) + "/" + "/".join(source_file.split("/", 2)[2:])] = calculate_sha256("/".join(elf_file_folder.split("/", 6)[:6]) + "/" + "/".join(source_file.split("/", 2)[2:]))
+    except:
+        debug_dictionary["/".join(elf_file_folder.split("/", 6)[:6]) + "/" + "/".join(source_file.split("/", 2)[2:])] = None
     return debug_dictionary
 
 
