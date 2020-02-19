@@ -4,7 +4,7 @@ import time
 from datetime import datetime
 
 def find_files(file_name):
-    command = ['locate', file_name.rpartition('/')[2]]
+    command = ['locate', '-b', '\\' + file_name.rpartition('/')[2]]
 
     output = subprocess.Popen(command, stdout=subprocess.PIPE).communicate()[0]
     output = output.decode()
