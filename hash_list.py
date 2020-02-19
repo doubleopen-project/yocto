@@ -69,21 +69,21 @@ def try_sha256(elf_file_folder, source_file):
 def debug_sha256(elf_file_folder, source_file):
     debug_dictionary = {}
     try:
-        debug_dictionary['package'] = calculate_sha256(elf_file_folder + '/package' + source_file)
+        debug_dictionary[elf_file_folder + '/package' + source_file] = calculate_sha256(elf_file_folder + '/package' + source_file)
     except:
-        debug_dictionary['package'] = None
+        debug_dictionary[elf_file_folder + '/package' + source_file] = None
     try:
-        debug_dictionary['recipe-sysroot'] = calculate_sha256(elf_file_folder + '/recipe-sysroot' + source_file)
+        debug_dictionary[elf_file_folder + '/recipe-sysroot' + source_file] = calculate_sha256(elf_file_folder + '/recipe-sysroot' + source_file)
     except:
-        debug_dictionary['recipe-sysroot'] = None
+        debug_dictionary[elf_file_folder + '/recipe-sysroot' + source_file] = None
     try:
-        debug_dictionary['recipe-sysroot-native'] = calculate_sha256(elf_file_folder + '/recipe-sysroot-native' + source_file)
+        debug_dictionary[elf_file_folder + '/recipe-sysroot-native' + source_file] = calculate_sha256(elf_file_folder + '/recipe-sysroot-native' + source_file)
     except:
-        debug_dictionary['recipe-sysroot-native'] = None
+        debug_dictionary[elf_file_folder + '/recipe-sysroot-native' + source_file] = None
     try:
-        debug_dictionary['root'] = calculate_sha256(path + "/" + "/".join(source_file.split("/", 4)[4:]))
+        debug_dictionary[(elf_file_folder + "/" + "/".join(source_file.split("/", 4)[4:]))] = calculate_sha256((elf_file_folder + "/" + "/".join(source_file.split("/", 4)[4:])))
     except:
-        debug_dictionary['root'] = None
+        debug_dictionary[(elf_file_folder + "/" + "/".join(source_file.split("/", 4)[4:]))] = None
     return debug_dictionary
 
 
@@ -120,7 +120,7 @@ for file in os.listdir(pkgdata_folder):
                         hash_dictionary[file][elf_file][source_file] = debug_sha256(elf_file_folder, source_file)
                         debug_dict['source_list'].append(source_file)
 
-                        if not hash_dictionary[file][elf_file][source_file]['package'] and not hash_dictionary[file][elf_file][source_file]['recipe-sysroot'] and not hash_dictionary[file][elf_file][source_file]['recipe-sysroot-native'] and not hash_dictionary[file][elf_file][source_file]['root']:
+                        if not any(value for value in hash_dictionary[file][elf_file][source_file].values()):
                             debug_dict['no_hash_found'].append(source_file)
                         
                         hashes = []
