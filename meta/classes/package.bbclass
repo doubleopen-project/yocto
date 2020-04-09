@@ -1360,6 +1360,7 @@ python emit_pkgdata() {
     from glob import glob
     import json
     import subprocess
+    import hashlib
 
     def process_postinst_on_target(pkg, mlprefix):
         pkgval = d.getVar('PKG_%s' % pkg)
@@ -1423,6 +1424,13 @@ fi
                 subdata_file = "%s/runtime/%s" % (pkgdatadir, ml_pkg)
                 with open(subdata_file, 'w') as fd:
                     fd.write("PKG_%s: %s" % (ml_pkg, pkg))
+
+    def sha256(fname):
+        hash_sha256 = hashlib.sha256()
+        with open(fname, 'rb') as f:
+            for chunk in iter(lambda: f.read(4096), b""):
+                hash_sha256.update(chunk)
+        return hash_sha256.hexdigest()
 
     packages = d.getVar('PACKAGES')
     pkgdest = d.getVar('PKGDEST')
@@ -1521,7 +1529,17 @@ fi
     sources = {}
     if sourceresult:
         for r in sourceresult:
-            sources[r[0]] = r[1]
+            sources[r[0]] = []
+            for source in r[1]:
+                sourcedirents = [d.getVar('PKGD'), d.getVar('STAGING_DIR_TARGET')]
+                for dirent in sourcedirents:
+                    try:
+                        sources[r[0]].append({source: sha256(dirent + source)})
+                        break
+                    except:
+                        pass
+                else:
+                    sources[r[0]].append({source: None})
         with open(data_file + ".srclist", 'w') as f:
             f.write(json.dumps(sources, sort_keys=True))
 
